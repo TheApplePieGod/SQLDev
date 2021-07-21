@@ -1,5 +1,5 @@
 import React from 'react';
-import * as theme from '../theme';
+import * as types from '../definitions/types';
 import * as api from '../definitions/api';
 import AceEditor from "react-ace";
 import "ace-builds/src-noconflict/mode-sql";
@@ -12,35 +12,28 @@ import { SnackbarStatus } from './Snackbar';
 
 interface Props {
     openSnackbar: (status: SnackbarStatus, message: string, closeDelay: number) => void;
+    project: types.Project;
+    updateProject: (updatedProject: types.Project) => void;
 }
 
 export const CodeEditor = (props: Props) => {
     const [deployOpen, setDeployOpen] = React.useState(false);
-    const [code, setCode] = React.useState("");
-    const [secondaryCode, setSecondaryCode] = React.useState("");
     const [outputState, setOutputState] = React.useState<{ columns: GridColDef[], rows: any[] }>({
         columns: [],
         rows: [],
     })
 
     const onChange = (text: string) => {
-        setCode(text);
-        localStorage.setItem("savedCode", text);
+        let updatedProject = props.project;
+        updatedProject.mainCode = text;
+        props.updateProject(updatedProject);
     }
 
     const onChangeSecondary = (text: string) => {
-        setSecondaryCode(text);
-        localStorage.setItem("savedSecondaryCode", text);
+        let updatedProject = props.project;
+        updatedProject.testCode = text;
+        props.updateProject(updatedProject);
     }
-
-    React.useEffect(() => {
-        const savedCode = localStorage.getItem("savedCode");
-        if (savedCode)
-            setCode(savedCode);
-        const savedSecondaryCode = localStorage.getItem("savedSecondaryCode");
-        if (savedSecondaryCode)
-            setSecondaryCode(savedSecondaryCode);
-    }, []);
 
     const updateOutputState = (output: QueryResult) => {
         let columns: GridColDef[] = [];
@@ -76,7 +69,7 @@ export const CodeEditor = (props: Props) => {
     };
 
     const runAndTest = () => {
-        api.submitSQL(code, secondaryCode).then((result) => {
+        api.submitSQL(props.project.mainCode, props.project.testCode).then((result) => {
             console.log(result);
             updateOutputState(result);
         });
@@ -84,7 +77,7 @@ export const CodeEditor = (props: Props) => {
 
     // only run the test code
     const test = () => {
-        api.submitSQL(secondaryCode, "").then((result) => {
+        api.submitSQL(props.project.testCode, "").then((result) => {
             console.log(result);
             updateOutputState(result);
         });
@@ -103,7 +96,7 @@ export const CodeEditor = (props: Props) => {
                     mode="sql"
                     theme="tomorrow_night_bright"
                     onChange={onChange}
-                    value={code}
+                    value={props.project.mainCode}
                     tabSize={4}
                     showPrintMargin={false}
                     width="100%"
@@ -116,7 +109,7 @@ export const CodeEditor = (props: Props) => {
                     mode="sql"
                     theme="tomorrow_night_bright"
                     onChange={onChangeSecondary}
-                    value={secondaryCode}
+                    value={props.project.testCode}
                     tabSize={4}
                     showPrintMargin={false}
                     width="100%"
@@ -139,7 +132,7 @@ export const CodeEditor = (props: Props) => {
                     />
                 </div>
             </div>
-            <DeployDialog openSnackbar={props.openSnackbar} open={deployOpen} onClose={() => setDeployOpen(false)} code={code} />
+            <DeployDialog project={props.project} updateProject={props.updateProject} openSnackbar={props.openSnackbar} open={deployOpen} onClose={() => setDeployOpen(false)} />
         </React.Fragment>
     );
 }

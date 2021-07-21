@@ -93,38 +93,75 @@ app.on('activate', function () {
 // begin app code
 // -----------------------------------------------------
 
-// make sure to include an info section about this & the tcp thing & creating a user
-ipcMain.handle('initialize', async (event) => {
-	exec('net start \"SQL Server Browser\"', (err, stdout, stderr) => {
-		if (err) {
-			if (stderr.includes("already been started"))
-				console.log("Server browser already running");
-			else
-				console.log(err);
-		} else {
-			console.log("Server browser successfully started");
-		}
+let sqlConnection = undefined;
 
-		let config = {
-			user: 'migration',
-			password: 'password',
-			server: 'DESKTOP-KELGD28\\SQLEXPRESS', 
-			database: 'BigMohammadBot_364208021171339265',
-			options: {
-				trustServerCertificate: true,
-				multipleStatements: true
-			}
-		};
-	
-		sql.connect(config, (err) => {
-			if (err) {
-				console.log(err);
-				event.sender.send('initialized', err);
-			} else {
-				event.sender.send('initialized', "");
-			}
-		})
+const closeConnection = async () => {
+	if (sqlConnection)
+		await sqlConnection.close();
+	sqlConnection = undefined;
+}
+
+ipcMain.handle('closeConnection', async (event) => {
+	await closeConnection();
+});
+
+const sqlConnect = async (ipcEvent, connectionInfo, serviceStarted) => {
+	let config = {
+		user: connectionInfo.user,
+		password: connectionInfo.password,
+		server: connectionInfo.server, 
+		database: connectionInfo.database,
+		connectionTimeout: connectionInfo.connectionTimeoutMs,
+		options: {
+			trustServerCertificate: connectionInfo.trustServerCertificate,
+			encrypt: connectionInfo.encrypt,
+		}
+	};
+
+	await closeConnection();
+
+	sqlConnection = sql.connect(config, (err) => {
+		if (err) {
+			console.log(err);
+			ipcEvent.sender.send('initialized', {
+				connectResult: err,
+				browserServiceStarted: serviceStarted,
+				browserServiceShouldStart: connectionInfo.autoStartServerBrowser
+			});
+		} else {
+			ipcEvent.sender.send('initialized', {
+				connectResult: "",
+				browserServiceStarted: serviceStarted,
+				browserServiceShouldStart: connectionInfo.autoStartServerBrowser
+			});
+		}
 	})
+}
+
+ipcMain.handle('initialize', async (event, connectionInfo) => {
+	if (connectionInfo.autoStartServerBrowser) {
+		let elevatePath = path.join(__dirname, "\\..\\node_modules\\node-windows\\bin\\elevate\\elevate.cmd");
+		if (process.env.NODE_ENV !== 'development' || app.isPackaged || isPackaged)
+			elevatePath = path.join(__dirname, "\\resources\\app.asar.unpacked\\node_modules\\node-windows\\bin\\elevate\\elevate.cmd");
+		exec(`\"${elevatePath}\" sc config sqlbrowser start= demand`, (err, stdout, stderr) => {
+			let started = false; // && net start sqlbrowser
+			if (err) {
+				if (stderr.includes("already been started")) {
+					console.log("Server browser already running");
+					started = true;
+				}
+				else
+					console.log(err);
+			} else {
+				console.log("Server browser successfully started");
+				started = true;
+			}
+
+			sqlConnect(event, connectionInfo, started);
+		});
+	} else {
+		sqlConnect(event, connectionInfo, false);
+	}
 });
 
 const runSql = async (code) => {
@@ -253,25 +290,6 @@ ipcMain.handle('deployScript', async (event, path, code, settings) => {
 	}
 	return {error: "Migration directory does not exist", result: []};
 });
-
-/*
-IF OBJECT_ID('wamm_notifications.udf_GetAlerts') IS NOT NULL
-DROP FUNCTION [wamm_notifications].udf_GetAlerts
-GO
-CREATE FUNCTION [wamm_notifications].udf_GetAlerts(@UserId int)
-RETURNS @ResultTable TABLE (Id int, Content NVARCHAR( 200 ), ClickAction int, ClickInfo NVARCHAR(75), Viewed bit, [Timestamp] datetime)
-AS BEGIN
-INSERT INTO @ResultTable
-	
-	select Alert.Id, Alert.Content, Alert.ClickAction, Alert.ClickInfo, Alert.Viewed, Alert.[Timestamp]
-	from wamm_notifications.[Alert] Alert
-		left join dbo.[User] [User] on ([User].id = Alert.UserId)
-	where Alert.UserId = @UserId
-		and ([User].Deleted = 0 and [User].Active = 1)
-
-RETURN
-END
-*/
 
 const parseFunctionReturnValue = (code) => {
 	code = code.replaceAll("\r", " ").replaceAll("\n", " ").replaceAll("\t", " ");

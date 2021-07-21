@@ -4,71 +4,53 @@ import * as api from '../definitions/api';
 import * as types from '../definitions/types';
 import { Button, Checkbox, Dialog, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Select, TextField, Tooltip, Typography } from '@material-ui/core';
 import InfoIcon from '@material-ui/icons/Info';
+import { SnackbarStatus } from './Snackbar';
+import { ResultsDialog } from './resultsDialog';
 
 interface Props {
     open: boolean;
     onClose: () => void;
-    code: string;
     openSnackbar: (status: SnackbarStatus, message: string, closeDelay: number) => void;
+    project: types.Project;
+    updateProject: (updatedProject: types.Project) => void;
 }
 
 export const DeployDialog = (props: Props) => {
-    const [migrationsFolder, setMigrationsFolder] = React.useState("");
-    const [classFolder, setClassFolder] = React.useState("");
-    const [deploySettings, setDeploySettings] = React.useState<types.DeploySettings>({
-        deleteOldFunctionScripts: false,
-        includeSchema: false,
-        nameTemplate: "Script{#4} - {f}",
-        prefixExclude: "udf_",
-        classNamespace: ""
-    })
+    const [deployResults, setDeployResults] = React.useState<string[]>([]);
 
     React.useEffect(() => {
-        const savedMigrationsFolder = localStorage.getItem("migrationsFolder");
-        if (savedMigrationsFolder)
-            setMigrationsFolder(savedMigrationsFolder);
-        const savedClassFolder = localStorage.getItem("classFolder");
-        if (savedClassFolder)
-            setClassFolder(savedClassFolder);
-        const savedDeploySettings = localStorage.getItem("deploySettings");
-        if (savedDeploySettings)
-            setDeploySettings(JSON.parse(savedDeploySettings));
-    }, []);
+        
+    }, [props.project.deploySettings]);
 
-    React.useEffect(() => {
-        localStorage.setItem("deploySettings", JSON.stringify(deploySettings));
-    }, [deploySettings]);
-
-    const updateMigrationsFolder = () => {
-        api.openFolderDialog(migrationsFolder).then((data) => {
+    const updateMigrationFolder = () => {
+        api.openFolderDialog(props.project.migrationFolder).then((data) => {
             if (data.length == 0) return;
-            setMigrationsFolder(data[0]);
-            localStorage.setItem("migrationsFolder", data[0]);
+            props.updateProject({...props.project, migrationFolder: data[0]});
         });
     }
 
     const updateClassFolder = () => {
-        api.openFolderDialog(classFolder).then((data) => {
+        api.openFolderDialog(props.project.classFolder).then((data) => {
             if (data.length == 0) return;
-            setClassFolder(data[0]);
-            localStorage.setItem("classFolder", data[0]);
+            props.updateProject({...props.project, classFolder: data[0]});
         });
     }
 
     const deploy = () => {
-        api.deployScript(migrationsFolder, props.code, deploySettings).then((migrationResult) => {
+        api.deployScript(props.project.migrationFolder, props.project.mainCode, props.project.deploySettings).then((migrationResult) => {
             if (migrationResult.error == "") {
-                api.deployBackend(classFolder, props.code, deploySettings).then((backendResult) => {
+                api.deployBackend(props.project.classFolder, props.project.mainCode, props.project.deploySettings).then((backendResult) => {
                     if (backendResult.error == "") {
-
+                        props.openSnackbar(SnackbarStatus.Success, `Everything was successfully deployed`, 3000);
+                        setDeployResults(backendResult.result);
+                    } else {
+                        props.openSnackbar(SnackbarStatus.Error, `Migration script deployed successfully, but there was an error deploying class: ${backendResult.error}`, 6000);
                     }
                 });
+            } else {
+                props.openSnackbar(SnackbarStatus.Error, `Error deploying migration script: ${migrationResult.error}`, 6000);
             }
         });
-    }
-
-    const formatTemplateString = () => {
-        
     }
 
     return (
@@ -86,18 +68,18 @@ export const DeployDialog = (props: Props) => {
                                 fullWidth
                                 label="Migrations folder"
                                 variant="outlined"
-                                value={migrationsFolder}
+                                value={props.project.migrationFolder}
                                 disabled
                             />
-                            <Button variant="outlined" onClick={updateMigrationsFolder}>Change</Button>
+                            <Button variant="outlined" onClick={updateMigrationFolder}>Change</Button>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "0.5rem" }}>
                             <TextField
                                 fullWidth
                                 label="Script name template"
                                 variant="outlined"
-                                value={deploySettings.nameTemplate}
-                                onChange={(e) => setDeploySettings({...deploySettings, nameTemplate: e.target.value})}
+                                value={props.project.deploySettings.nameTemplate}
+                                onChange={(e) => props.updateProject({...props.project, deploySettings: {...props.project.deploySettings, nameTemplate: e.target.value}})}
                             />
                             <Tooltip
                                 title={
@@ -115,7 +97,7 @@ export const DeployDialog = (props: Props) => {
                                 <InfoIcon />
                             </Tooltip>
                             <FormControlLabel
-                                control={<Checkbox checked={deploySettings.deleteOldFunctionScripts} onChange={(e) => setDeploySettings({...deploySettings, deleteOldFunctionScripts: e.target.checked})} />}
+                                control={<Checkbox checked={props.project.deploySettings.deleteOldFunctionScripts} onChange={(e) => props.updateProject({...props.project, deploySettings: {...props.project.deploySettings, deleteOldFunctionScripts: e.target.checked}})} />}
                                 label="Delete old function scripts"
                             />
                         </div>
@@ -124,7 +106,7 @@ export const DeployDialog = (props: Props) => {
                                 <InfoIcon />
                             </Tooltip>
                             <FormControlLabel
-                                control={<Checkbox checked={deploySettings.includeSchema} onChange={(e) => setDeploySettings({...deploySettings, includeSchema: e.target.checked})} />}
+                                control={<Checkbox checked={props.project.deploySettings.includeSchema} onChange={(e) => props.updateProject({...props.project, deploySettings: {...props.project.deploySettings, includeSchema: e.target.checked}})} />}
                                 label="Include schema"
                             />
                         </div>
@@ -135,7 +117,7 @@ export const DeployDialog = (props: Props) => {
                                 fullWidth
                                 label="C# Class folder"
                                 variant="outlined"
-                                value={classFolder}
+                                value={props.project.classFolder}
                                 disabled
                             />
                             <Button variant="outlined" onClick={updateClassFolder}>Change</Button>
@@ -145,8 +127,8 @@ export const DeployDialog = (props: Props) => {
                                 fullWidth
                                 label="Exclude function prefix"
                                 variant="outlined"
-                                value={deploySettings.prefixExclude}
-                                onChange={(e) => setDeploySettings({...deploySettings, prefixExclude: e.target.value})}
+                                value={props.project.deploySettings.prefixExclude}
+                                onChange={(e) => props.updateProject({...props.project, deploySettings: {...props.project.deploySettings, prefixExclude: e.target.value}})}
                             />
                             <Tooltip title={<Typography>Optionally exclude any prefixes in the function name from the output C# class and file name</Typography>}>
                                 <InfoIcon />
@@ -157,8 +139,8 @@ export const DeployDialog = (props: Props) => {
                                 fullWidth
                                 label="Class namespace"
                                 variant="outlined"
-                                value={deploySettings.classNamespace}
-                                onChange={(e) => setDeploySettings({...deploySettings, classNamespace: e.target.value})}
+                                value={props.project.deploySettings.classNamespace}
+                                onChange={(e) => props.updateProject({...props.project, deploySettings: {...props.project.deploySettings, classNamespace: e.target.value}})}
                             />
                             <Tooltip title={<Typography>The namespace the C# class should be put in</Typography>}>
                                 <InfoIcon />
@@ -167,6 +149,7 @@ export const DeployDialog = (props: Props) => {
                     </div>
                     <Button variant="contained" style={{ backgroundColor: "#1f9e2c" }} onClick={deploy}>Deploy</Button>
                     <Button variant="contained" onClick={props.onClose}>Cancel</Button>
+                    <ResultsDialog open={deployResults.length > 0} onClose={() => setDeployResults([])} results={deployResults} />
                 </React.Fragment>
             }
         </Dialog>

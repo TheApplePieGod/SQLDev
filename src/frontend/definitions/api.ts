@@ -1,8 +1,12 @@
 const { ipcRenderer } = require("electron");
 import * as types from './types';
 
-export const initialize = () => {
-    ipcRenderer.invoke('initialize');
+export const initialize = (connectionInfo: types.ConnectionInfo) => {
+    ipcRenderer.invoke('initialize', connectionInfo);
+}
+
+export const closeConnection = async () => {
+    await ipcRenderer.invoke('closeConnection');
 }
 
 export const submitSQL = async (code: string, secondaryCode: string) => {
