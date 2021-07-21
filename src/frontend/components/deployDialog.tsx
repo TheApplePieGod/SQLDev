@@ -9,24 +9,35 @@ interface Props {
     open: boolean;
     onClose: () => void;
     code: string;
+    openSnackbar: (status: SnackbarStatus, message: string, closeDelay: number) => void;
 }
 
 export const DeployDialog = (props: Props) => {
     const [migrationsFolder, setMigrationsFolder] = React.useState("");
-    const [nameTemplate, setNameTemplate] = React.useState("Script{#4} - {f}");
+    const [classFolder, setClassFolder] = React.useState("");
     const [deploySettings, setDeploySettings] = React.useState<types.DeploySettings>({
         deleteOldFunctionScripts: false,
         includeSchema: false,
+        nameTemplate: "Script{#4} - {f}",
+        prefixExclude: "udf_",
+        classNamespace: ""
     })
 
     React.useEffect(() => {
         const savedMigrationsFolder = localStorage.getItem("migrationsFolder");
         if (savedMigrationsFolder)
             setMigrationsFolder(savedMigrationsFolder);
-        const savedNameTemplate = localStorage.getItem("nameTemplate");
-        if (savedNameTemplate)
-            setNameTemplate(savedNameTemplate);
+        const savedClassFolder = localStorage.getItem("classFolder");
+        if (savedClassFolder)
+            setClassFolder(savedClassFolder);
+        const savedDeploySettings = localStorage.getItem("deploySettings");
+        if (savedDeploySettings)
+            setDeploySettings(JSON.parse(savedDeploySettings));
     }, []);
+
+    React.useEffect(() => {
+        localStorage.setItem("deploySettings", JSON.stringify(deploySettings));
+    }, [deploySettings]);
 
     const updateMigrationsFolder = () => {
         api.openFolderDialog(migrationsFolder).then((data) => {
@@ -36,18 +47,28 @@ export const DeployDialog = (props: Props) => {
         });
     }
 
-    const updateNameTemplate = (name: string) => {
-        setNameTemplate(name);
-        localStorage.setItem("nameTemplate", name);
+    const updateClassFolder = () => {
+        api.openFolderDialog(classFolder).then((data) => {
+            if (data.length == 0) return;
+            setClassFolder(data[0]);
+            localStorage.setItem("classFolder", data[0]);
+        });
     }
 
     const deploy = () => {
-        // api.deployScript(migrationsFolder, props.code, nameTemplate, deploySettings).then((result) => {
-        //     console.log(result);
-        // });
-        api.deployBackend(migrationsFolder, props.code, deploySettings).then((result) => {
-            console.log(result);
+        api.deployScript(migrationsFolder, props.code, deploySettings).then((migrationResult) => {
+            if (migrationResult.error == "") {
+                api.deployBackend(classFolder, props.code, deploySettings).then((backendResult) => {
+                    if (backendResult.error == "") {
+
+                    }
+                });
+            }
         });
+    }
+
+    const formatTemplateString = () => {
+        
     }
 
     return (
@@ -75,8 +96,8 @@ export const DeployDialog = (props: Props) => {
                                 fullWidth
                                 label="Script name template"
                                 variant="outlined"
-                                value={nameTemplate}
-                                onChange={(e) => updateNameTemplate(e.target.value)}
+                                value={deploySettings.nameTemplate}
+                                onChange={(e) => setDeploySettings({...deploySettings, nameTemplate: e.target.value})}
                             />
                             <Tooltip
                                 title={
@@ -108,8 +129,44 @@ export const DeployDialog = (props: Props) => {
                             />
                         </div>
                         <hr />
+                        <br />
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "0.5rem" }}>
+                            <TextField
+                                fullWidth
+                                label="C# Class folder"
+                                variant="outlined"
+                                value={classFolder}
+                                disabled
+                            />
+                            <Button variant="outlined" onClick={updateClassFolder}>Change</Button>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "0.5rem" }}>
+                            <TextField
+                                fullWidth
+                                label="Exclude function prefix"
+                                variant="outlined"
+                                value={deploySettings.prefixExclude}
+                                onChange={(e) => setDeploySettings({...deploySettings, prefixExclude: e.target.value})}
+                            />
+                            <Tooltip title={<Typography>Optionally exclude any prefixes in the function name from the output C# class and file name</Typography>}>
+                                <InfoIcon />
+                            </Tooltip>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "0.5rem" }}>
+                            <TextField
+                                fullWidth
+                                label="Class namespace"
+                                variant="outlined"
+                                value={deploySettings.classNamespace}
+                                onChange={(e) => setDeploySettings({...deploySettings, classNamespace: e.target.value})}
+                            />
+                            <Tooltip title={<Typography>The namespace the C# class should be put in</Typography>}>
+                                <InfoIcon />
+                            </Tooltip>
+                        </div>
                     </div>
                     <Button variant="contained" style={{ backgroundColor: "#1f9e2c" }} onClick={deploy}>Deploy</Button>
+                    <Button variant="contained" onClick={props.onClose}>Cancel</Button>
                 </React.Fragment>
             }
         </Dialog>

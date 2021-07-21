@@ -8,8 +8,13 @@ import { Button, Divider, Typography, } from '@material-ui/core';
 import { QueryResult } from '../definitions/types';
 import { XGrid, GridColDef } from '@material-ui/x-grid';
 import { DeployDialog } from './deployDialog';
+import { SnackbarStatus } from './Snackbar';
 
-export const CodeEditor = () => {
+interface Props {
+    openSnackbar: (status: SnackbarStatus, message: string, closeDelay: number) => void;
+}
+
+export const CodeEditor = (props: Props) => {
     const [deployOpen, setDeployOpen] = React.useState(false);
     const [code, setCode] = React.useState("");
     const [secondaryCode, setSecondaryCode] = React.useState("");
@@ -134,7 +139,7 @@ export const CodeEditor = () => {
                     />
                 </div>
             </div>
-            <DeployDialog open={deployOpen} onClose={() => setDeployOpen(false)} code={code} />
+            <DeployDialog openSnackbar={props.openSnackbar} open={deployOpen} onClose={() => setDeployOpen(false)} code={code} />
         </React.Fragment>
     );
 }

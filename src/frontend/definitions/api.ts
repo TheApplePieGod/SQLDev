@@ -15,12 +15,12 @@ export const openFolderDialog = async (path: string) => {
     return result;
 }
 
-export const deployScript = async (path: string, code: string, template: string, settings: types.DeploySettings) => {
-    const result: string = await ipcRenderer.invoke('deployScript', path, code, template, settings);
+export const deployScript = async (path: string, code: string, settings: types.DeploySettings) => {
+    const result: types.DeployResult = await ipcRenderer.invoke('deployScript', path, code, settings);
     return result;
 }
 
 export const deployBackend = async (path: string, code: string, settings: types.DeploySettings) => {
-    const result: string = await ipcRenderer.invoke('deployBackend', path, code, settings);
+    const result: types.DeployResult = await ipcRenderer.invoke('deployBackend', path, code, settings);
     return result;
 }

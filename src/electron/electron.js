@@ -206,15 +206,15 @@ const enumerateDirectory = (path, fileList) => {
 }
 
 // schema should be specified when creating functions to prevent any possible issues
-ipcMain.handle('deployScript', async (event, path, code, template, settings) => {
+ipcMain.handle('deployScript', async (event, path, code, settings) => {
 	if (fs.existsSync(path)) {
-		const firstScriptNumberIndex = template.indexOf("{#");
-		const scriptNumDigits = parseInt(template[firstScriptNumberIndex + 2]);
+		const firstScriptNumberIndex = settings.nameTemplate.indexOf("{#");
+		const scriptNumDigits = parseInt(settings.nameTemplate[firstScriptNumberIndex + 2]);
 		const lastScriptNumberIndex = firstScriptNumberIndex + scriptNumDigits;
 
 		const functionName = parseFunctionNameFromCode(code, settings.includeSchema);
 		if (functionName == "")
-			return "Could not determine function name";
+			return {error: "Could not determine function name", result: []};
 
 		let currentIncrement = 0;
 		const files = fs.readdirSync(path);
@@ -234,10 +234,10 @@ ipcMain.handle('deployScript', async (event, path, code, template, settings) => 
 
 		const formattedIncrement = currentIncrement.toString().padStart(scriptNumDigits, "0");
 		if (formattedIncrement.length > scriptNumDigits)
-			return "Script number exceeds digit formatting";
+			return {error: "Script number exceeds allowed digits", result: []};
 		else {
-			const functionNameIndex = template.indexOf("{f}");
-			let finalScriptName = template;
+			const functionNameIndex = settings.nameTemplate.indexOf("{f}");
+			let finalScriptName = settings.nameTemplate;
 			if (firstScriptNumberIndex != -1)
 				finalScriptName = finalScriptName.substring(0, firstScriptNumberIndex) + formattedIncrement + finalScriptName.substring(firstScriptNumberIndex + 4);
 			if (functionNameIndex != -1)
@@ -248,10 +248,10 @@ ipcMain.handle('deployScript', async (event, path, code, template, settings) => 
 
 			fs.writeFileSync(`${path}/${finalScriptName}.sql`, finalCode);
 
-			return finalScriptName;
+			return {error: "", result: [finalScriptName]};
 		}
 	}
-	return "Migration directory does not exist";
+	return {error: "Migration directory does not exist", result: []};
 });
 
 /*
@@ -379,23 +379,29 @@ const getCSharpTypeFromSqlType = (type) => {
 
 ipcMain.handle('deployBackend', async (event, path, code, settings) => {
 	if (fs.existsSync(path)) {
-		const functionName = parseFunctionNameFromCode(code, false);
+		let functionName = parseFunctionNameFromCode(code, false);
 		if (functionName == "")
-			return "Could not determine function name";
+			return {error: "Could not determine function name", result: []};
 		
+		if (settings.prefixExclude != "") {
+			functionName = functionName.replace(settings.prefixExclude, "").trim();
+		}
+
 		const classMembers = [];
 		const parsedReturnValues = parseFunctionReturnValue(code);
 		parsedReturnValues.forEach((value) => {
 			classMembers.push(`public ${getCSharpTypeFromSqlType(value.type)} ${value.var} { get; set; }`);
 		});
 
-		let namespace = "Test.Namespace"
-		const finalText = `using System;\nusing System.Collections.Generic;\nusing System.ComponentModel.DataAnnotations;\nusing System.ComponentModel.DataAnnotations.Schema;\n\nnamespace ${namespace}\n{\n\tpublic class ${functionName}\n\t{\n\t\t${classMembers.join('\n\t\t')}\n\t}\n}`;
 		const finalFileName = `${functionName}Result`;
+		const finalText = `using System;\nusing System.Collections.Generic;\nusing System.ComponentModel.DataAnnotations;\nusing System.ComponentModel.DataAnnotations.Schema;\n\nnamespace ${settings.classNamespace}\n{\n\tpublic class ${finalFileName}\n\t{\n\t\t${classMembers.join('\n\t\t')}\n\t}\n}`;
 
 		fs.writeFileSync(`${path}/${finalFileName}.cs`, finalText);
 
-		return finalFileName;
+		// return the two lines that need to be added to databasecontext
+		const line1 = `public DbSet<${finalFileName}> ${finalFileName}Model { get; set; }`;
+		const line2 = `modelBuilder.Entity<${finalFileName}>().HasNoKey();`;
+		return {error: "", result: [line1, line2]};
 	}
-	return "Backend directory does not exist";
+	return {error: "Backend directory does not exist", result: []};
 });
