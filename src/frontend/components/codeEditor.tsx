@@ -47,10 +47,6 @@ export const CodeEditor = (props: Props) => {
                 })
             });
 
-            output.data = output.data.concat(JSON.parse(JSON.stringify(output.data)))
-            output.data = output.data.concat(JSON.parse(JSON.stringify(output.data)))
-            output.data = output.data.concat(JSON.parse(JSON.stringify(output.data)))
-
             columns.unshift({ // identity column
                 field: "id",
                 headerName: "Index",
