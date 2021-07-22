@@ -39,7 +39,10 @@ export const CodeEditor = (props: Props) => {
         let columns: GridColDef[] = [];
 
         if (output.data && output.data.length > 0) {
+            let addId = true;
             Object.getOwnPropertyNames(output.data[0]).forEach((n) => {
+                if (n == "id")
+                    addId = false; // dont add identity column if it already exists in the data
                 columns.push({
                     field: n,
                     headerName: n,
@@ -47,14 +50,16 @@ export const CodeEditor = (props: Props) => {
                 })
             });
 
-            columns.unshift({ // identity column
-                field: "id",
-                headerName: "Index",
-                width: 150,
-            })
-            // populate data with local identity
-            for (let i = 0; i < output.data.length; i++) {
-                output.data[i]["id"] = i;
+            if (addId) {
+                columns.unshift({ // identity column
+                    field: "id",
+                    headerName: "Index",
+                    width: 150,
+                })
+                // populate data with local identity
+                for (let i = 0; i < output.data.length; i++) {
+                    output.data[i]["id"] = i;
+                }
             }
         }
 
@@ -82,6 +87,15 @@ export const CodeEditor = (props: Props) => {
     const deploy = () => {
         setDeployOpen(true);
     }
+
+    React.useEffect(() => {
+        setTimeout(() => {
+            const elem = document.querySelector("div[class=MuiDataGrid-main]");
+            if (elem) {
+                elem.removeChild(elem.children[0]);
+            }
+        }, 200);
+    }, []);
 
     return (
         <React.Fragment>
