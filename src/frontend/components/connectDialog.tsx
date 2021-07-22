@@ -72,6 +72,7 @@ export const ConnectDialog = (props: Props) => {
                             fullWidth
                             onChange={(e) => updatePassword(e.target.value)}
                             label="Password"
+                            type="password"
                             variant="outlined"
                             value={password}
                             style={{ marginBottom: "0.75rem" }}
