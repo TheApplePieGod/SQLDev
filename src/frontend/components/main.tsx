@@ -127,7 +127,7 @@ export const Main = () => {
                         labelId="project-select-label"
                         label="Selected project"
                         value={project}
-                        disabled={connecting}
+                        disabled={connecting || Object.getOwnPropertyNames(loadedProjects).length == 0}
                         onChange={(e) => switchProject(e.target.value as string)}
                     >
                         {
