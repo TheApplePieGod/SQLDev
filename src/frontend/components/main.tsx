@@ -49,8 +49,9 @@ export const Main = () => {
         }
         setConnecting(false);
 
-        if (result.browserServiceShouldStart && !result.browserServiceStarted)
-            openSnackbar(SnackbarStatus.Error, "Error: SQL Server Browser service could not be started", 5000);
+        // only show this if we fail to connect
+        if (result.connectResult != "" && result.browserServiceShouldStart && !result.browserServiceStarted)
+            openSnackbar(SnackbarStatus.Warning, "Warning: SQL Server Browser service was not started. It may already be running.", 5000);
     }
 
     const updateProject = (newProject: string) => {

@@ -6,6 +6,7 @@ import * as os from 'os';
 import * as sql from 'mssql';
 import * as fs from 'fs'
 import { exec, execSync } from 'child_process';
+import { exec as sudo } from 'sudo-prompt';
 
 const isPackaged = require('electron-is-packaged').isPackaged;
 
@@ -140,13 +141,10 @@ const sqlConnect = async (ipcEvent, connectionInfo, serviceStarted) => {
 
 ipcMain.handle('initialize', async (event, connectionInfo) => {
 	if (connectionInfo.autoStartServerBrowser) {
-		let elevatePath = path.join(__dirname, "\\..\\node_modules\\node-windows\\bin\\elevate\\elevate.cmd");
-		if (process.env.NODE_ENV !== 'development' || app.isPackaged || isPackaged)
-			elevatePath = path.join(__dirname, "\\resources\\app.asar.unpacked\\node_modules\\node-windows\\bin\\elevate\\elevate.cmd");
-		exec(`\"${elevatePath}\" sc config sqlbrowser start= demand`, (err, stdout, stderr) => {
-			let started = false; // && net start sqlbrowser
+		sudo("sc config sqlbrowser start= demand && net start sqlbrowser", (err, stdout, stderr) => {
+			let started = false;
 			if (err) {
-				if (stderr.includes("already been started")) {
+				if (stderr && stderr.includes("already been started")) {
 					console.log("Server browser already running");
 					started = true;
 				}
