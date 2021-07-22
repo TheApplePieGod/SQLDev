@@ -1,6 +1,4 @@
 import React from 'react';
-import * as theme from '../theme';
-import * as types from '../definitions/types';
 import { Button, Checkbox, Dialog, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Select, TextField, Tooltip, Typography } from '@material-ui/core';
 
 interface Props {
@@ -20,9 +18,11 @@ export const InfoDialog = (props: Props) => {
                 <React.Fragment>
                     <DialogTitle>Connection Troubleshooting</DialogTitle>
                     <div style={{ padding: "1rem" }}>
+                        <Typography color="textPrimary">{`- Make sure your server allows SQL authentication. Enable it in your server's security properties and restart the server.
+                        `}</Typography>
                         <Typography color="textPrimary">{`- For named instances, make sure to enable the TCP protocol.
-                            Windows -> SQL Server <year> Configuration Manager -> SQL Server Network Configuration -> Protocols for <your server> -> TCP/IP -> Enable.
-                            Make sure to restart the database after this.
+                            Open Computer Management -> Services and Applications -> SQL Server Configuration Manager -> SQL Server Network Configuration -> Protocols for <your server> -> TCP/IP -> Enable.
+                            Make sure to restart the server after this.
                         `}</Typography>
                         <Typography color="textPrimary">{`- For named instances, make sure to enable and run the SQL Server Browser service. If the setting is enabled,
                         SQL Dev will attempt to do that itself if given administrator privileges.  
