@@ -137,6 +137,24 @@ export const DeployDialog = (props: Props) => {
                         <div style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "0.5rem" }}>
                             <TextField
                                 fullWidth
+                                label="C# class name template"
+                                variant="outlined"
+                                value={props.project.deploySettings.backendNameTemplate}
+                                onChange={(e) => props.updateProject({...props.project, deploySettings: {...props.project.deploySettings, backendNameTemplate: e.target.value}})}
+                            />
+                            <Tooltip
+                                title={
+                                    <Typography>
+                                        <b>{"{f}"}</b>: Name of the function after prefix exclusion
+                                    </Typography>
+                                }
+                            >
+                                <InfoIcon />
+                            </Tooltip>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "0.5rem" }}>
+                            <TextField
+                                fullWidth
                                 label="Class namespace"
                                 variant="outlined"
                                 value={props.project.deploySettings.classNamespace}

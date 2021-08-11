@@ -137,7 +137,7 @@ export const Main = () => {
                         }
                     </Select>
                 </FormControl>
-                <Fab disabled={connecting} size="small" style={{ fontSize: "32px", paddingBottom: "0.4rem", backgroundColor: "#1f9e2c" }} onClick={() => setNewProjectOpen(true)}>+</Fab>
+                <Fab disabled={connecting} size="small" style={{ fontSize: "32px", paddingBottom: "0.1rem", backgroundColor: "#1f9e2c" }} onClick={() => setNewProjectOpen(true)}>+</Fab>
                 {project != "" && <Fab disabled={connecting} size="small" style={{ backgroundColor: "#9b3032" }} onClick={() => setConfirmOpen(true)}><DeleteIcon /></Fab>}
             </div>
             {project != "" &&
