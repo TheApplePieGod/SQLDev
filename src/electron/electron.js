@@ -403,19 +403,23 @@ ipcMain.handle('deployBackend', async (event, path, code, settings) => {
 			functionName = functionName.replace(settings.prefixExclude, "").trim();
 		}
 
+		const functionNameIndex = settings.backendNameTemplate.indexOf("{f}");
+		let finalFileName = settings.backendNameTemplate;
+		if (functionNameIndex != -1)
+			finalFileName = finalFileName.substring(0, functionNameIndex) + functionName + finalFileName.substring(functionNameIndex + 3);;
+
 		const classMembers = [];
 		const parsedReturnValues = parseFunctionReturnValue(code);
 		parsedReturnValues.forEach((value) => {
 			classMembers.push(`public ${getCSharpTypeFromSqlType(value.type)} ${value.var} { get; set; }`);
 		});
 
-		const finalFileName = `${functionName}Result`;
 		const finalText = `using System;\nusing System.Collections.Generic;\nusing System.ComponentModel.DataAnnotations;\nusing System.ComponentModel.DataAnnotations.Schema;\n\nnamespace ${settings.classNamespace}\n{\n\tpublic class ${finalFileName}\n\t{\n\t\t${classMembers.join('\n\t\t')}\n\t}\n}`;
 
 		fs.writeFileSync(`${path}/${finalFileName}.cs`, finalText);
 
 		// return the two lines that need to be added to databasecontext
-		const line1 = `public DbSet<${finalFileName}> ${finalFileName}Model { get; set; }`;
+		const line1 = `public DbSet<${finalFileName}> ${functionName}Model { get; set; }`;
 		const line2 = `modelBuilder.Entity<${finalFileName}>().HasNoKey();`;
 		return {error: "", result: [line1, line2]};
 	}

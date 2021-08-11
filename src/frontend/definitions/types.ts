@@ -19,6 +19,7 @@ export interface DeploySettings {
     includeSchema: boolean;
     nameTemplate: string;
     prefixExclude: string;
+    backendNameTemplate: string;
     classNamespace: string;
 }
 
@@ -27,6 +28,7 @@ export const DeploySettingsDefault: DeploySettings = {
     includeSchema: false,
     nameTemplate: "Script{#4} - {f}",
     prefixExclude: "udf_",
+    backendNameTemplate: "{f}QueryReturnValue",
     classNamespace: ""
 }
 
