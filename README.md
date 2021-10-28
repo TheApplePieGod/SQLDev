@@ -1,3 +1,3 @@
-ElectronTemplate
+# SQL Dev
 
-Template for a desktop-only react app
+A tool to speed up the development process of creating & testing SQL functions and deploying them to C# apps.
